@@ -16,6 +16,33 @@ function cleanUri(rawUri) {
 }
 
 /**
+ * Initializes required indexes for CaseMind collections.
+ * @param {import('mongodb').Db} database
+ */
+async function initIndexes(database) {
+  try {
+    // Unique compound index: prevents duplicate evidence codes per case
+    await database.collection('evidence').createIndex(
+      { caseId: 1, evidenceCode: 1 },
+      { unique: true }
+    );
+
+    // Timeline index: chronological retrieval of evidence
+    await database.collection('evidence').createIndex(
+      { caseId: 1, occurredAt: 1 }
+    );
+
+    // Unique compound index: ensures immutable, conflict-free report versions
+    await database.collection('reports').createIndex(
+      { caseId: 1, version: 1 },
+      { unique: true }
+    );
+  } catch (err) {
+    console.error(`[MongoDB] Warning: Error ensuring collection indexes: ${err.message}`);
+  }
+}
+
+/**
  * Connects to MongoDB Atlas and verifies the connection with a ping.
  * @returns {Promise<import('mongodb').Db>}
  */
@@ -43,6 +70,9 @@ async function connectDB() {
     // Verify connectivity with a ping command
     const database = client.db(dbName);
     await database.command({ ping: 1 });
+
+    // Ensure required collection indexes are created
+    await initIndexes(database);
 
     db = database;
     console.log(`[MongoDB] Connected successfully to database: ${dbName}`);

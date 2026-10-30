@@ -4,8 +4,12 @@ const {
   getCases,
   getCaseById,
 } = require('../controllers/caseController');
+const evidenceRoutes = require('./evidenceRoutes');
 
 const router = express.Router();
+
+// Mount Evidence sub-routes: /api/cases/:caseId/evidence
+router.use('/:caseId/evidence', evidenceRoutes);
 
 router.post('/', createCase);
 router.get('/', getCases);
