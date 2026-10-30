@@ -5,9 +5,10 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "test": "node test/test_case_api.js && node test/test_evidence_api.js && node test/test_memory_api.js",
+    "test": "node test/test_case_api.js && node test/test_evidence_api.js && node test/test_memory_api.js && node test/test_report_api.js",
     "test:evidence": "node test/test_evidence_api.js",
-    "test:memory": "node test/test_memory_api.js"
+    "test:memory": "node test/test_memory_api.js",
+    "test:report": "node test/test_report_api.js"
   },
   "keywords": [],
   "author": "",
