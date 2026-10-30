@@ -37,6 +37,11 @@ async function initIndexes(database) {
       { caseId: 1, version: 1 },
       { unique: true }
     );
+
+    // Working memory lookup index: scopes by case and filters by status
+    await database.collection('memories').createIndex(
+      { caseId: 1, status: 1 }
+    );
   } catch (err) {
     console.error(`[MongoDB] Warning: Error ensuring collection indexes: ${err.message}`);
   }

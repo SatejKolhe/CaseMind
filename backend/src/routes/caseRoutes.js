@@ -5,11 +5,13 @@ const {
   getCaseById,
 } = require('../controllers/caseController');
 const evidenceRoutes = require('./evidenceRoutes');
+const memoryRoutes = require('./memoryRoutes');
 
 const router = express.Router();
 
-// Mount Evidence sub-routes: /api/cases/:caseId/evidence
+// Mount Case-scoped sub-routes
 router.use('/:caseId/evidence', evidenceRoutes);
+router.use('/:caseId/memories', memoryRoutes);
 
 router.post('/', createCase);
 router.get('/', getCases);
