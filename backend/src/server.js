@@ -10,6 +10,32 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const DB_NAME = process.env.DB_NAME || 'casemind';
 
+// Configurable CORS support
+const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:3000', 'http://localhost:5173'];
+const allowedOrigins = process.env.FRONTEND_ORIGIN
+  ? process.env.FRONTEND_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : DEFAULT_ALLOWED_ORIGINS;
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes('*')) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
 // Middleware for parsing JSON requests
 app.use(express.json());
 
