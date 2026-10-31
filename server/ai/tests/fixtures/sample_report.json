@@ -1,0 +1,73 @@
+{
+  "knownFacts": [
+    {
+      "statement": "Keycard badge #308 was swiped at Vault 4 at 01:15 AM.",
+      "evidenceIds": ["EV-01"],
+      "basis": "Electronic access control log telemetry"
+    },
+    {
+      "statement": "Decompression sensor registered pressure drop at 01:15 AM.",
+      "evidenceIds": ["EV-02"],
+      "basis": "HVAC SCADA environmental telemetry"
+    }
+  ],
+  "unverifiedClaims": [
+    {
+      "statement": "Security guard claims door was wide open at 01:12 AM.",
+      "evidenceIds": ["EV-03"],
+      "verificationStatus": "unverified"
+    }
+  ],
+  "evidenceConnections": [
+    {
+      "description": "Keycard badge swipe coincides with vault atmospheric decompression.",
+      "evidenceIds": ["EV-01", "EV-02"],
+      "status": "supported",
+      "why": "Matching timestamps and physical telemetry"
+    }
+  ],
+  "contradictions": [
+    {
+      "claimA": {
+        "text": "Sensor log records door securely locked until 01:15 AM.",
+        "evidenceIds": ["EV-01", "EV-02"]
+      },
+      "claimB": {
+        "text": "Officer visual inspection claims door was open at 01:12 AM.",
+        "evidenceIds": ["EV-03"]
+      },
+      "explanation": "Guard observation precedes badge swipe and decompression timestamp.",
+      "unresolved": true
+    }
+  ],
+  "hypotheses": [
+    {
+      "hypothesisId": "HYP-01",
+      "description": "Authorized badge holder accessed the vault at 01:15 AM.",
+      "supportingEvidenceIds": ["EV-01", "EV-02"],
+      "conflictingEvidenceIds": ["EV-03"],
+      "status": "under_consideration"
+    },
+    {
+      "hypothesisId": "HYP-02",
+      "description": "The vault was breached earlier prior to the badge swipe.",
+      "supportingEvidenceIds": ["EV-03"],
+      "conflictingEvidenceIds": ["EV-01", "EV-02"],
+      "status": "weakened"
+    }
+  ],
+  "openQuestions": [
+    {
+      "question": "Was guard watch accurate or running fast?",
+      "relatedEvidenceIds": ["EV-03"]
+    }
+  ],
+  "suggestedNextChecks": [
+    {
+      "check": "Audit guard time clock sync against server NTP",
+      "purpose": "Verify observation timestamp accuracy",
+      "relatedHypothesisIds": ["HYP-01", "HYP-02"]
+    }
+  ],
+  "memoryUpdates": []
+}

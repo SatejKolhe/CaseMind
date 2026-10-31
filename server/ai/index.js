@@ -8,6 +8,7 @@ const { buildAnalysisInput, runAnalysisWithMode } = require('./modes');
 const schemas = require('./schemas');
 const config = require('./config');
 const { buildChangeSummary, diffReports } = require('./changeSummary');
+const { buildGraph } = require('./graphData');
 
 /**
  * In-memory per-case promise queues to ensure strict sequential execution
@@ -341,6 +342,9 @@ module.exports = {
   // Change summary & diffing
   buildChangeSummary,
   diffReports,
+
+  // Graph data export
+  buildGraph,
 
   // Primary exports per SPEC.md & architecture
   redact,
