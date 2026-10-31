@@ -333,6 +333,8 @@ async function analyzeValidated(
     digests,
   });
 
+  const isDebugAi = process.env.DEBUG_AI === 'true';
+
   // 1. Initial Model Call
   const rawOutput = await llmCaller({
     system: SYSTEM_PROMPT,
@@ -343,6 +345,14 @@ async function analyzeValidated(
 
   // 2. Validate initial output
   const initialValidation = validateOutput(rawOutput, validationContext);
+  if (isDebugAi) {
+    console.log('[DEBUG_AI] Attempt 1 validation errors:', initialValidation.errors);
+    console.log(
+      '[DEBUG_AI] Attempt 1 raw model output (truncated to 3000 chars):\n',
+      JSON.stringify(rawOutput, null, 2).slice(0, 3000)
+    );
+  }
+
   if (initialValidation.valid) {
     return rawOutput;
   }
@@ -367,6 +377,14 @@ async function analyzeValidated(
 
   // 4. Validate repaired output
   const repairValidation = validateOutput(repairedOutput, validationContext);
+  if (isDebugAi) {
+    console.log('[DEBUG_AI] Attempt 2 (repair) validation errors:', repairValidation.errors);
+    console.log(
+      '[DEBUG_AI] Attempt 2 raw model output (truncated to 3000 chars):\n',
+      JSON.stringify(repairedOutput, null, 2).slice(0, 3000)
+    );
+  }
+
   if (repairValidation.valid) {
     console.log('[analyzeValidated] Repair attempt succeeded: output is now valid.');
     return repairedOutput;
@@ -377,10 +395,15 @@ async function analyzeValidated(
   );
 
   // 5. Still invalid -> throw ValidationError. Never return or save invalid output!
-  throw new ValidationError(
+  const validationError = new ValidationError(
     `[analyzeValidated] Output failed validation after repair attempt (${repairValidation.errors.length} error(s) remain).`,
     repairValidation.errors
   );
+  validationError.allErrors = {
+    attempt1: initialValidation.errors,
+    attempt2: repairValidation.errors,
+  };
+  throw validationError;
 }
 
 module.exports = {

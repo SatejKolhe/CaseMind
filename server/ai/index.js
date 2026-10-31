@@ -257,6 +257,7 @@ async function processEvidence(deps, { caseId, evidenceId, memoryMode = 'on', re
       return {
         status: 'analysis_failed',
         error: errorMsg,
+        details: Array.isArray(err.errors) ? err.errors : [errorMsg],
         evidencePreserved: true,
       };
     }
@@ -336,6 +337,276 @@ async function processEvidence(deps, { caseId, evidenceId, memoryMode = 'on', re
 }
 
 /**
+ * Maps raw or arbitrary memory proposal type to one of the 6 backend-supported memory categories:
+ * ['fact', 'claim', 'contradiction', 'inference', 'hypothesis', 'open_question']
+ *
+ * @param {string} rawType
+ * @returns {'fact'|'claim'|'contradiction'|'inference'|'hypothesis'|'open_question'}
+ */
+function mapMemoryCategory(rawType) {
+  if (!rawType || typeof rawType !== 'string') return 'inference';
+  const lower = rawType.toLowerCase().trim();
+
+  switch (lower) {
+    case 'fact':
+    case 'verified_fact':
+    case 'known_fact':
+    case 'timeline_event':
+    case 'timeline':
+      return 'fact';
+
+    case 'claim':
+    case 'unverified_claim':
+    case 'witness':
+    case 'statement':
+      return 'claim';
+
+    case 'contradiction':
+    case 'inconsistency':
+    case 'conflict':
+    case 'discrepancy':
+      return 'contradiction';
+
+    case 'hypothesis':
+    case 'theory':
+    case 'working_theory':
+      return 'hypothesis';
+
+    case 'open_question':
+    case 'question':
+    case 'unknown':
+    case 'intelligence_gap':
+      return 'open_question';
+
+    case 'connection':
+    case 'evidence_connection':
+    case 'inference':
+    case 'deduction':
+    case 'lead':
+    case 'link':
+    default:
+      return 'inference';
+  }
+}
+
+/**
+ * Maps model output into the shape strictly required by Member 1's backend validator (API_CONTRACT.md).
+ *
+ * @param {object} params
+ * @param {object} params.rawResult - Raw or parsed model output containing report and memoryProposals
+ * @param {object} [params.caseDetails] - Case details
+ * @param {Array<object>} [params.evidenceList] - Evidence records in this case
+ * @param {Array<object>} [params.currentMemories] - Active working memories in this case
+ * @returns {object} Canonical backend investigation report object
+ */
+function mapModelOutputToBackend({ rawResult, caseDetails = {}, evidenceList = [], currentMemories = [] }) {
+  const caseEvidenceIds = new Set(
+    (evidenceList || []).map((e) => e.evidenceCode || e.id || e._id).filter(Boolean)
+  );
+  const caseMemoryIds = new Set(
+    (currentMemories || []).map((m) => (m.id || m._id ? String(m.id || m._id).trim() : '')).filter(Boolean)
+  );
+
+  const rep = rawResult?.report || rawResult || {};
+  const proposals = Array.isArray(rawResult?.memoryProposals)
+    ? rawResult.memoryProposals
+    : (Array.isArray(rep.memoryUpdates) ? rep.memoryUpdates : []);
+
+  // 1. knownFacts
+  const knownFacts = (rep.knownFacts || []).map((kf) => {
+    const rawCodes = kf.evidenceCodes || kf.evidenceIds || [];
+    const validCodes = (Array.isArray(rawCodes) ? rawCodes : [rawCodes])
+      .map(String)
+      .filter((id) => caseEvidenceIds.has(id));
+
+    return {
+      statement: typeof kf.statement === 'string' && kf.statement.trim() ? kf.statement.trim() : 'Verified fact',
+      evidenceCodes: validCodes,
+      verifiedByEvidenceCodes: validCodes,
+    };
+  }).filter((kf) => kf.evidenceCodes.length > 0 && kf.statement.length > 0);
+
+  // 2. unverifiedClaims
+  const unverifiedClaims = (rep.unverifiedClaims || []).map((uc) => {
+    const rawCodes = uc.evidenceCodes || uc.evidenceIds || [];
+    const validCodes = (Array.isArray(rawCodes) ? rawCodes : [rawCodes])
+      .map(String)
+      .filter((id) => caseEvidenceIds.has(id));
+
+    const source = uc.source && typeof uc.source === 'string' && uc.source.trim()
+      ? uc.source.trim()
+      : (typeof uc.verificationStatus === 'string' ? uc.verificationStatus.trim() : 'Unverified source');
+
+    return {
+      statement: typeof uc.statement === 'string' && uc.statement.trim() ? uc.statement.trim() : 'Unverified claim',
+      source: source || 'Unverified source',
+      evidenceCodes: validCodes,
+    };
+  }).filter((uc) => uc.evidenceCodes.length > 0 && uc.statement.length > 0);
+
+  // 3. evidenceConnections
+  const evidenceConnections = (rep.evidenceConnections || []).map((ec) => {
+    const rawCodes = ec.evidenceCodes || ec.evidenceIds || [];
+    const validCodes = (Array.isArray(rawCodes) ? rawCodes : [rawCodes])
+      .map(String)
+      .filter((id) => caseEvidenceIds.has(id));
+
+    const connection = ec.connection || ec.description || ec.statement || '';
+
+    return {
+      connection: typeof connection === 'string' && connection.trim() ? connection.trim() : 'Evidence connection',
+      evidenceCodes: validCodes,
+    };
+  }).filter((ec) => ec.evidenceCodes.length > 0 && ec.connection.length > 0);
+
+  // 4. contradictions
+  const contradictions = (rep.contradictions || []).map((c) => {
+    const rawCodes = [
+      ...(Array.isArray(c.conflictingEvidenceCodes) ? c.conflictingEvidenceCodes : []),
+      ...(Array.isArray(c.evidenceCodes) ? c.evidenceCodes : []),
+      ...(Array.isArray(c.claimA?.evidenceIds) ? c.claimA.evidenceIds : []),
+      ...(Array.isArray(c.claimB?.evidenceIds) ? c.claimB.evidenceIds : []),
+    ];
+    const validCodes = Array.from(new Set(rawCodes.map(String).filter((id) => caseEvidenceIds.has(id))));
+
+    const pointOfConflict = c.pointOfConflict || c.explanation || c.statement ||
+      (c.claimA?.text && c.claimB?.text ? `${c.claimA.text} contradicts ${c.claimB.text}` : 'Contradiction detected');
+
+    return {
+      pointOfConflict: typeof pointOfConflict === 'string' && pointOfConflict.trim()
+        ? pointOfConflict.trim()
+        : 'Point of conflict identified',
+      conflictingEvidenceCodes: validCodes,
+    };
+  }).filter((c) => c.conflictingEvidenceCodes.length > 0 && c.pointOfConflict.length > 0);
+
+  // 5. possibleHypotheses
+  const possibleHypotheses = (rep.possibleHypotheses || rep.hypotheses || []).map((h, idx) => {
+    const rawSupported = h.supportedBy || h.supportingEvidenceIds || h.evidenceCodes || [];
+    const supportedBy = (Array.isArray(rawSupported) ? rawSupported : [rawSupported])
+      .map(String)
+      .filter((id) => caseEvidenceIds.has(id));
+
+    const rawUnresolved = [
+      ...(Array.isArray(h.unresolvedPoints) ? h.unresolvedPoints : []),
+      ...(Array.isArray(h.conflictingEvidenceIds) ? h.conflictingEvidenceIds.map((id) => `Conflicting evidence ${id} pending reconciliation`) : []),
+    ];
+    const unresolvedPoints = rawUnresolved.map(String).filter(Boolean);
+
+    const title = h.title && typeof h.title === 'string' && h.title.trim()
+      ? h.title.trim()
+      : (h.description || 'Investigative Hypothesis').slice(0, 60).trim();
+
+    const rationale = h.rationale && typeof h.rationale === 'string' && h.rationale.trim()
+      ? h.rationale.trim()
+      : (h.description || 'Investigative theory formulated from evidence.').trim();
+
+    return {
+      hypothesisId: h.hypothesisId || `HYP-${idx + 1}`,
+      title: title || 'Investigative Theory',
+      rationale: rationale || 'Rationale pending.',
+      supportedBy,
+      unresolvedPoints: unresolvedPoints.length > 0 ? unresolvedPoints : ['Requires further corroborating evidence.'],
+    };
+  }).filter((h) => h.hypothesisId.length > 0 && h.title.length > 0 && h.rationale.length > 0);
+
+  // 6. openQuestions
+  const openQuestions = (rep.openQuestions || []).map((q) => {
+    if (typeof q === 'string') return q.trim();
+    if (q && typeof q === 'object' && typeof q.question === 'string') return q.question.trim();
+    return '';
+  }).filter(Boolean);
+
+  // 7. suggestedNextChecks
+  const suggestedNextChecks = (rep.suggestedNextChecks || []).map((s) => {
+    if (typeof s === 'string') return s.trim();
+    if (s && typeof s === 'object') {
+      const check = typeof s.check === 'string' ? s.check.trim() : '';
+      const purpose = typeof s.purpose === 'string' && s.purpose.trim() ? ` (${s.purpose.trim()})` : '';
+      return `${check}${purpose}`.trim();
+    }
+    return '';
+  }).filter(Boolean);
+
+  // 8. memoryUpdates
+  const memoryUpdates = [];
+  for (const prop of proposals) {
+    const rawType = prop.category || prop.type || 'inference';
+    const category = mapMemoryCategory(rawType);
+
+    let action = 'add';
+    const rawAction = prop.action ? String(prop.action).toLowerCase().trim() : 'add';
+    if (rawAction === 'supersede') {
+      action = 'supersede';
+    } else if (rawAction === 'update' || rawAction === 'mark_disputed' || rawAction === 'resolve') {
+      action = 'update';
+    } else {
+      action = 'add';
+    }
+
+    const explicitTargetId = prop.targetMemoryId || prop.memoryId || prop.targetId;
+    let targetMemoryId = undefined;
+    if (explicitTargetId && typeof explicitTargetId === 'string' && caseMemoryIds.has(explicitTargetId.trim())) {
+      targetMemoryId = explicitTargetId.trim();
+    } else if (action === 'update' || action === 'supersede') {
+      action = 'add';
+    }
+
+    const rawEvidence = prop.supportingEvidenceCodes || prop.evidenceIds || prop.evidenceCodes || [];
+    const supportingEvidenceCodes = (Array.isArray(rawEvidence) ? rawEvidence : [rawEvidence])
+      .map(String)
+      .filter((id) => caseEvidenceIds.has(id));
+
+    const statement = prop.statement || prop.summary || prop.description || '';
+    if (typeof statement === 'string' && statement.trim()) {
+      const updateItem = {
+        category,
+        statement: statement.trim(),
+        supportingEvidenceCodes,
+        action,
+        changeReason: typeof prop.changeReason === 'string' && prop.changeReason.trim()
+          ? prop.changeReason.trim()
+          : (typeof prop.reason === 'string' && prop.reason.trim() ? prop.reason.trim() : 'Synthesized from evidentiary analysis.'),
+      };
+      if (targetMemoryId) {
+        updateItem.targetMemoryId = targetMemoryId;
+      }
+      memoryUpdates.push(updateItem);
+    }
+  }
+
+  // 9. summary
+  const summary = (rep.summary && typeof rep.summary === 'string' && rep.summary.trim())
+    ? rep.summary.trim()
+    : `Investigation synthesis for "${caseDetails?.title || 'Case'}": Ingested ${evidenceList.length} evidence record(s). ${knownFacts.length} verified fact(s), ${possibleHypotheses.length} active hypothesis(es), and ${contradictions.length} contradiction(s) analyzed.`;
+
+  // 10. explanationOfChange
+  const explanationOfChange = rep.explanationOfChange && typeof rep.explanationOfChange === 'string'
+    ? rep.explanationOfChange.trim()
+    : (rep.memoryDelta?.explanation || 'Synthesis updated with latest evidentiary context.');
+
+  const memoryDelta = {
+    added: memoryUpdates.filter((u) => u.action === 'add').map((u) => u.statement),
+    updated: memoryUpdates.filter((u) => u.action === 'update' || u.action === 'supersede').map((u) => u.statement),
+    explanation: explanationOfChange,
+  };
+
+  return {
+    summary,
+    knownFacts,
+    unverifiedClaims,
+    evidenceConnections,
+    contradictions,
+    possibleHypotheses,
+    openQuestions: openQuestions.length > 0 ? openQuestions : ['Monitor incoming forensic and testimonial evidence.'],
+    suggestedNextChecks: suggestedNextChecks.length > 0 ? suggestedNextChecks : ['Verify timeline consistency across witness statements.'],
+    memoryUpdates,
+    memoryDelta,
+    explanationOfChange,
+  };
+}
+
+/**
  * Adapts high-level investigation synthesis for backend consumption per API_CONTRACT.md.
  * Synthesizes case evidence and active working memories, returning canonical sections.
  *
@@ -386,115 +657,12 @@ async function analyzeInvestigation({ caseDetails, evidenceList = [], currentMem
     caseMemoryIds,
   });
 
-  const rep = rawResult.report || {};
-  const proposals = rawResult.memoryProposals || [];
-
-  // Map knownFacts
-  const knownFacts = (rep.knownFacts || []).map((kf) => ({
-    statement: kf.statement,
-    verifiedByEvidenceCodes: (kf.evidenceIds || []).filter((id) => caseEvidenceIds.has(id)),
-  })).filter((kf) => kf.verifiedByEvidenceCodes.length > 0);
-
-  // Map unverifiedClaims
-  const unverifiedClaims = (rep.unverifiedClaims || []).map((uc) => ({
-    statement: uc.statement,
-    source: uc.verificationStatus || 'unverified source',
-    evidenceCodes: (uc.evidenceIds || []).filter((id) => caseEvidenceIds.has(id)),
-  })).filter((uc) => uc.evidenceCodes.length > 0);
-
-  // Map evidenceConnections
-  const evidenceConnections = (rep.evidenceConnections || []).map((ec) => ({
-    connection: ec.description,
-    evidenceCodes: (ec.evidenceIds || []).filter((id) => caseEvidenceIds.has(id)),
-  })).filter((ec) => ec.evidenceCodes.length > 0);
-
-  // Map contradictions
-  const contradictions = (rep.contradictions || []).map((c) => {
-    const conflictingCodes = [
-      ...(c.claimA?.evidenceIds || []),
-      ...(c.claimB?.evidenceIds || []),
-    ].filter((id) => caseEvidenceIds.has(id));
-
-    return {
-      pointOfConflict: c.explanation || `${c.claimA?.text || 'Claim A'} contradicts ${c.claimB?.text || 'Claim B'}`,
-      conflictingEvidenceCodes: conflictingCodes,
-    };
-  }).filter((c) => c.conflictingEvidenceCodes.length > 0);
-
-  // Map possibleHypotheses
-  const possibleHypotheses = (rep.hypotheses || []).map((h) => {
-    const supportedBy = (h.supportingEvidenceIds || []).filter((id) => caseEvidenceIds.has(id));
-    const unresolvedPoints = (h.conflictingEvidenceIds || []).filter((id) => caseEvidenceIds.has(id));
-
-    return {
-      hypothesisId: h.hypothesisId || 'HYP-1',
-      title: (h.description || 'Hypothesis').slice(0, 60),
-      rationale: h.description || '',
-      supportedBy,
-      unresolvedPoints: unresolvedPoints.length > 0 ? unresolvedPoints : ['Requires further corroborating evidence.'],
-    };
+  return mapModelOutputToBackend({
+    rawResult,
+    caseDetails,
+    evidenceList,
+    currentMemories,
   });
-
-  // Map openQuestions & suggestedNextChecks
-  const openQuestions = (rep.openQuestions || []).map((q) => (typeof q === 'string' ? q : q.question)).filter(Boolean);
-  const suggestedNextChecks = (rep.suggestedNextChecks || []).map((s) => {
-    if (typeof s === 'string') return s;
-    return `${s.check}${s.purpose ? ` (${s.purpose})` : ''}`.trim();
-  }).filter(Boolean);
-
-  // Map memoryUpdates
-  const categoryMap = {
-    fact: 'fact',
-    lead: 'inference',
-    inconsistency: 'contradiction',
-    hypothesis: 'hypothesis',
-    timeline_event: 'fact',
-  };
-
-  const memoryUpdates = [];
-  for (const prop of proposals) {
-    const category = categoryMap[prop.type] || 'inference';
-    let action = 'add';
-    let targetMemoryId = undefined;
-
-    if (prop.action === 'supersede' && prop.targetMemoryId && caseMemoryIds.has(prop.targetMemoryId)) {
-      action = 'supersede';
-      targetMemoryId = prop.targetMemoryId;
-    } else if (prop.action === 'update' && prop.targetMemoryId && caseMemoryIds.has(prop.targetMemoryId)) {
-      action = 'update';
-      targetMemoryId = prop.targetMemoryId;
-    }
-
-    const supportingEvidenceCodes = (prop.evidenceIds || []).filter((id) => caseEvidenceIds.has(id));
-    if (supportingEvidenceCodes.length > 0) {
-      const updateItem = {
-        category,
-        statement: prop.summary,
-        supportingEvidenceCodes,
-        action,
-        changeReason: prop.reason || 'Synthesized from evidentiary analysis.',
-      };
-      if (targetMemoryId) {
-        updateItem.targetMemoryId = targetMemoryId;
-      }
-      memoryUpdates.push(updateItem);
-    }
-  }
-
-  const summary = `Investigation synthesis for "${caseDetails?.title || 'Case'}": Ingested ${evidenceList.length} evidence record(s). ${knownFacts.length} verified fact(s), ${possibleHypotheses.length} active hypothesis(es), and ${contradictions.length} contradiction(s) analyzed.`;
-
-  return {
-    summary,
-    knownFacts,
-    unverifiedClaims,
-    evidenceConnections,
-    contradictions,
-    possibleHypotheses,
-    openQuestions: openQuestions.length > 0 ? openQuestions : ['Monitor incoming forensic and testimonial evidence.'],
-    suggestedNextChecks: suggestedNextChecks.length > 0 ? suggestedNextChecks : ['Verify timeline consistency across witness statements.'],
-    memoryUpdates,
-    explanationOfChange: `Synthesis updated based on latest evidence ${newEvidence.evidenceCode || newEvidence.title || ''}.`,
-  };
 }
 
 module.exports = {
@@ -510,6 +678,8 @@ module.exports = {
 
   // Backend interoperability export
   analyzeInvestigation,
+  mapModelOutputToBackend,
+  mapMemoryCategory,
 
   // Primary exports per SPEC.md & architecture
   redact,

@@ -54,6 +54,7 @@ async function handleAnalysisRequest(req, res, { reanalyze = false } = {}) {
       error: {
         code: 'ANALYSIS_FAILED',
         message: result.error || 'Evidence analysis failed.',
+        details: Array.isArray(result.details) ? result.details : [],
         evidencePreserved: result.evidencePreserved !== false,
       },
     });
