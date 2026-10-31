@@ -1,0 +1,99 @@
+{
+  "caseId": "case_eval_invoice",
+  "caseType": "financial_discrepancy",
+  "title": "Procurement Invoice Anomaly at Apex Technologies",
+  "description": "Internal finance audit flagged an unapproved $48,000 vendor disbursement request for network switches.",
+  "clues": [
+    {
+      "evidenceCode": "EV-01",
+      "title": "Approved Purchase Order PO-8820",
+      "content": "Official procurement document PO-8820 authorizes the purchase of 20 managed network switches from NetStream Solutions at $1,200 each, totaling $24,000.",
+      "source": "ERP Procurement System",
+      "sourceType": "document",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-10T09:00:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-02",
+      "title": "Vendor Invoice INV-904",
+      "content": "Vendor NetStream Solutions submitted invoice INV-904 requesting $48,000 for 40 managed network switches, citing PO-8820 as authorization.",
+      "source": "Accounts Payable Portal",
+      "sourceType": "document",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-15T14:30:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-03",
+      "title": "Dock Delivery Manifest",
+      "content": "Warehouse freight manifest confirms delivery carrier dropped off exactly 20 sealed hardware cartons from NetStream on October 14 at 11:15 AM.",
+      "source": "Logistics Manifest",
+      "sourceType": "document",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-14T11:15:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-04",
+      "title": "Warehouse Floor Note (Contradiction)",
+      "content": "Assistant warehouse manager signed an internal intake sheet asserting 40 switch cartons were received and moved into secure cage B on October 14 at 11:15 AM.",
+      "source": "Internal Intake Note",
+      "sourceType": "document",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-14T11:15:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-05",
+      "title": "Facilities Maintenance Log (Irrelevant)",
+      "content": "Facility maintenance records show HVAC filter unit on the third floor east wing was replaced during quarterly maintenance.",
+      "source": "HVAC Service Ticket",
+      "sourceType": "document",
+      "verificationStatus": "unverified",
+      "occurredAt": "2026-10-12T10:00:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-06",
+      "title": "Vendor Billing Correction Notice",
+      "content": "NetStream Solutions accounts director sent an email stating INV-904 was a duplicate automated system billing error caused by an ERP migration, and only 20 switches were shipped under revised invoice INV-904-A for $24,000.",
+      "correctsEvidenceId": "EV-02",
+      "source": "NetStream Executive Email",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-16T16:00:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-07",
+      "title": "Physical IT Asset Count",
+      "content": "Internal IT audit lead physically inspected secure storage cage B and verified exactly 20 serial-numbered NetStream switches in packaging.",
+      "source": "Physical Audit Inspection",
+      "sourceType": "physical",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-17T09:30:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-08",
+      "title": "Revised Invoice INV-904-A",
+      "content": "Accounts Payable logged receipt of corrected invoice INV-904-A from NetStream for 20 units totaling $24,000 matching PO-8820.",
+      "source": "ERP Accounting System",
+      "sourceType": "document",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-17T11:00:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-09",
+      "title": "Duplicate PO Confirmation",
+      "content": "Official procurement document PO-8820 authorizes the purchase of 20 managed network switches from NetStream Solutions at $1,200 each, totaling $24,000.",
+      "source": "ERP Procurement System",
+      "sourceType": "document",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-10T09:00:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-10",
+      "title": "Banking Wire Hold Notice",
+      "content": "Corporate treasury confirmed the automated ACH disbursement of $48,000 was intercepted and canceled prior to settlement.",
+      "source": "Treasury Banking Log",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-17T14:00:00.000Z"
+    }
+  ]
+}

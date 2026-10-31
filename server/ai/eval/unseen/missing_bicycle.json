@@ -1,0 +1,99 @@
+{
+  "caseId": "case_eval_bicycle",
+  "caseType": "property_theft",
+  "title": "Campus Bicycle Disappearance at Riverdale University",
+  "description": "A high-end road bicycle disappeared from university grounds between 16:00 and 19:30 on Wednesday.",
+  "clues": [
+    {
+      "evidenceCode": "EV-01",
+      "title": "Owner Initial Report",
+      "content": "Student Sarah Chen reported locking her red Trek Domane bicycle at the Science Quad bike rack at 16:15 using a steel U-lock.",
+      "source": "Student Sarah Chen",
+      "sourceType": "witness",
+      "verificationStatus": "unverified",
+      "occurredAt": "2026-10-28T16:15:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-02",
+      "title": "Campus Patrol Observation",
+      "content": "Campus safety officer observed a red bicycle secured at the Science Quad bike rack during scheduled patrol at 17:00.",
+      "source": "Campus Safety Officer",
+      "sourceType": "witness",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-28T17:00:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-03",
+      "title": "Groundskeeper Statement (Contradiction)",
+      "content": "Campus maintenance groundskeeper swept the Science Quad plaza at 16:50 and insists the bike rack was completely vacant with zero bicycles present.",
+      "source": "Groundskeeper Maintenance Log",
+      "sourceType": "witness",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-28T16:50:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-04",
+      "title": "Cafeteria Notice (Irrelevant)",
+      "content": "University dining services posted that the student union cafeteria served roasted vegetable lasagna between 12:00 and 14:00.",
+      "source": "Dining Services Notice",
+      "sourceType": "document",
+      "verificationStatus": "unverified",
+      "occurredAt": "2026-10-28T12:00:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-05",
+      "title": "Pathway CCTV Footage",
+      "content": "Pathway security camera #6 captures an unidentified individual riding a red road bike toward North Perimeter Gate at 17:45.",
+      "source": "Security Video Recording",
+      "sourceType": "cctv",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-28T17:45:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-06",
+      "title": "Owner Correction Statement",
+      "content": "Sarah Chen called dispatch to correct her initial statement: after checking her calendar, she realized she parked the bike at the Library Annex rack at 16:15, not at the Science Quad.",
+      "correctsEvidenceId": "EV-01",
+      "source": "Sarah Chen Follow-up Call",
+      "sourceType": "witness",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-28T18:30:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-07",
+      "title": "Library Annex Desk Attendant",
+      "content": "Library student worker recalls seeing a red road bicycle locked outside the Library Annex glass entrance at 17:10.",
+      "source": "Library Worker Log",
+      "sourceType": "witness",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-28T17:10:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-08",
+      "title": "Physical Lock Evidence",
+      "content": "Campus safety officer recovered severed remnants of a heavy-duty steel U-lock in a bushes trash bin adjacent to the Library Annex.",
+      "source": "Physical Evidence Recovery",
+      "sourceType": "physical",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-29T08:15:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-09",
+      "title": "Duplicate Library Attendant Record",
+      "content": "Library student worker recalls seeing a red road bicycle locked outside the Library Annex glass entrance at 17:10.",
+      "source": "Library Worker Log",
+      "sourceType": "witness",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-28T17:10:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-10",
+      "title": "North Gate Turnstile Telemetry",
+      "content": "North perimeter gate vehicle barrier recorded an unscheduled override passage at 17:48 with no card badge scan registered.",
+      "source": "Gate Access Control Log",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-28T17:48:00.000Z"
+    }
+  ]
+}

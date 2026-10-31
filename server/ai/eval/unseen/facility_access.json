@@ -1,0 +1,99 @@
+{
+  "caseId": "case_eval_facility",
+  "caseType": "security_breach",
+  "title": "Cleanroom Lab Security Alert at Helios BioTech",
+  "description": "Environmental sensors detected airlock pressure drops and off-hours door access at the Grade-A cleanroom.",
+  "clues": [
+    {
+      "evidenceCode": "EV-01",
+      "title": "Airlock Keycard Swipe In",
+      "content": "Electronic badge reader at Cleanroom Airlock 1 registered access using badge #402 belonging to Research Fellow Marcus Vance at 02:18 AM.",
+      "source": "Access Control Controller",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-25T02:18:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-02",
+      "title": "Barometric Decompression Event",
+      "content": "Cleanroom atmospheric monitor logged differential pressure drop from +45 Pa to +12 Pa between 02:18 AM and 02:22 AM consistent with outer door opening.",
+      "source": "HVAC SCADA System",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-25T02:18:30.000Z"
+    },
+    {
+      "evidenceCode": "EV-03",
+      "title": "Corridor Motion Detector (Contradiction)",
+      "content": "Internal PIR motion detector M-104 directly facing Airlock 1 outer door recorded absolute zero movement between 01:00 AM and 04:00 AM.",
+      "source": "Intrusion Detection Panel",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-25T02:18:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-04",
+      "title": "Cafeteria Log (Irrelevant)",
+      "content": "Breakroom supply contractor refilled the instant coffee station and paper cups at 16:30 on the preceding afternoon.",
+      "source": "Vendor Delivery Sign-off",
+      "sourceType": "document",
+      "verificationStatus": "unverified",
+      "occurredAt": "2026-10-24T16:30:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-05",
+      "title": "Vestibule Security Video",
+      "content": "Security camera C-12 over the outer vestibule captures an individual wearing full Tyvek particulate gown and visor entering Airlock 1 at 02:18 AM.",
+      "source": "CCTV DVR Archive",
+      "sourceType": "cctv",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-25T02:18:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-06",
+      "title": "Sensor Failure Diagnostic (Correction)",
+      "content": "Facilities diagnostic report shows motion detector M-104 suffered a blown 12V DC power fuse at 01:15 AM and was completely offline until technicians replaced it at 07:00 AM.",
+      "correctsEvidenceId": "EV-03",
+      "source": "Instrumentation Incident Log",
+      "sourceType": "document",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-25T07:00:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-07",
+      "title": "Airlock Keycard Swipe Out",
+      "content": "Electronic badge reader at Cleanroom Airlock 1 registered exit using badge #402 belonging to Marcus Vance at 02:41 AM.",
+      "source": "Access Control Controller",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-25T02:41:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-08",
+      "title": "Researcher Phone Call",
+      "content": "Security desk telephone record documents Marcus Vance calling from Geneva, Switzerland at 08:30 AM stating he is attending the European Biotech Symposium and left his badge inside his desk drawer.",
+      "source": "Security Desk Call Log",
+      "sourceType": "witness",
+      "verificationStatus": "unverified",
+      "occurredAt": "2026-10-25T08:30:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-09",
+      "title": "Duplicate Airlock Exit Record",
+      "content": "Electronic badge reader at Cleanroom Airlock 1 registered exit using badge #402 belonging to Marcus Vance at 02:41 AM.",
+      "source": "Access Control Controller",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-25T02:41:00.000Z"
+    },
+    {
+      "evidenceCode": "EV-10",
+      "title": "Freezer Temperature Log",
+      "content": "Ultra-low temperature freezer -80C unit #3 in cleanroom was opened for 85 seconds at 02:30 AM before being re-latched.",
+      "source": "Cryogenic Telemetry System",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-25T02:30:00.000Z"
+    }
+  ]
+}

@@ -259,7 +259,19 @@ async function generateJson({ system, user, jsonSchema, temperature = 0.2 }) {
       }
 
       // Exponential backoff: base 1000ms * 2^attempt + jitter
-      const backoffMs = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 300);
+      let backoffMs = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 300);
+
+      // If provider specifies a rate-limit retry delay (e.g. Gemini "Please retry in 40.15s")
+      if (status === 429 && err.message) {
+        const match = err.message.match(/retry in\s+([\d.]+)\s*s/i);
+        if (match && match[1]) {
+          const requestedSec = parseFloat(match[1]);
+          if (!isNaN(requestedSec) && requestedSec > 0) {
+            backoffMs = Math.ceil(requestedSec * 1000) + 1000;
+          }
+        }
+      }
+
       const reason = isAbort ? `timeout after ${timeoutMs}ms` : `HTTP ${status}`;
       console.warn(
         `[AI LLM] Request failed (${reason}). Retrying attempt ${attempt + 1}/${maxRetries} in ${backoffMs}ms...`
