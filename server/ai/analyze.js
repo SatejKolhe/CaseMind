@@ -67,7 +67,7 @@ function buildUserMessage({ newEvidence, relatedEvidence = [], memories = [], pr
   parts.push('<current_memories>');
   if (Array.isArray(memories) && memories.length > 0) {
     const memoryLines = memories.map((m, idx) => {
-      const id = m.id || m._id || `MEM-${idx + 1}`;
+      const id = m.id ? m.id.toString() : (m._id ? m._id.toString() : `MEM-${idx + 1}`);
       const type = m.type || m.category || 'fact';
       const text = m.summary || m.statement || '';
       const evidence = Array.isArray(m.evidenceIds)

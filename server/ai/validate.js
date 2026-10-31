@@ -155,8 +155,16 @@ function validateOutput(output, { caseEvidenceIds = [], caseMemoryIds = [], evid
     return { valid: false, errors };
   }
 
-  const validEvidenceSet = new Set(Array.isArray(caseEvidenceIds) ? caseEvidenceIds : Array.from(caseEvidenceIds || []));
-  const validMemorySet = new Set(Array.isArray(caseMemoryIds) ? caseMemoryIds : Array.from(caseMemoryIds || []));
+  const validEvidenceSet = new Set(
+    (Array.isArray(caseEvidenceIds) ? caseEvidenceIds : Array.from(caseEvidenceIds || []))
+      .map((id) => (id ? id.toString().trim() : ''))
+      .filter(Boolean)
+  );
+  const validMemorySet = new Set(
+    (Array.isArray(caseMemoryIds) ? caseMemoryIds : Array.from(caseMemoryIds || []))
+      .map((id) => (id ? id.toString().trim() : ''))
+      .filter(Boolean)
+  );
 
   // 2. Check every evidenceId anywhere in the output exists in caseEvidenceIds
   const citedEvidenceIds = collectAllCitedEvidenceIds(output);
@@ -307,8 +315,8 @@ async function analyzeValidated(
   ].filter(Boolean));
 
   const allCaseMemoryIds = new Set([
-    ...Array.from(caseMemoryIds || []),
-    ...(Array.isArray(memories) ? memories.map((m) => m.id || m._id) : []),
+    ...Array.from(caseMemoryIds || []).map((m) => (m ? m.toString().trim() : '')),
+    ...(Array.isArray(memories) ? memories.flatMap((m) => [m.id ? m.id.toString().trim() : '', m._id ? m._id.toString().trim() : '']) : []),
   ].filter(Boolean));
 
   const validationContext = {
@@ -341,7 +349,7 @@ async function analyzeValidated(
 
   // 3. Validation failed -> ONE repair call
   console.warn(
-    `[analyzeValidated] Output failed validation with ${initialValidation.errors.length} issue(s). Initiating 1 repair attempt...`
+    `[analyzeValidated] Output failed validation with ${initialValidation.errors.length} issue(s):\n  - ${initialValidation.errors.join('\n  - ')}\nInitiating 1 repair attempt...`
   );
 
   const repairMessage = buildRepairPrompt({
@@ -363,6 +371,10 @@ async function analyzeValidated(
     console.log('[analyzeValidated] Repair attempt succeeded: output is now valid.');
     return repairedOutput;
   }
+
+  console.warn(
+    `[analyzeValidated] Repair attempt failed with ${repairValidation.errors.length} issue(s):\n  - ${repairValidation.errors.join('\n  - ')}`
+  );
 
   // 5. Still invalid -> throw ValidationError. Never return or save invalid output!
   throw new ValidationError(

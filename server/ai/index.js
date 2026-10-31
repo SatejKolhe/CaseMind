@@ -193,25 +193,37 @@ async function processEvidence(deps, { caseId, evidenceId, memoryMode = 'on', re
     });
 
     // 6. Build validation context for reference integrity
-    const allEvidenceItems = contextData.allCaseEvidence || contextData.recentEvidence || [newEvidence];
+    const allEvidenceItems = (contextData.allCaseEvidence || contextData.recentEvidence || []).concat([newEvidence]);
     const caseEvidenceIds = Array.from(
       new Set(
         allEvidenceItems
-          .map((e) => e.evidenceCode || e._id || e.id)
-          .concat([newEvidence.evidenceCode || newEvidence._id || newEvidence.id])
+          .flatMap((e) => [
+            e.evidenceCode ? e.evidenceCode.toString().trim() : null,
+            e._id ? e._id.toString().trim() : null,
+            e.id ? e.id.toString().trim() : null,
+          ])
           .filter(Boolean)
       )
     );
 
     const evidenceStatuses = {};
     for (const item of allEvidenceItems) {
-      const code = item.evidenceCode || item._id || item.id;
-      if (code) evidenceStatuses[code] = item.verificationStatus || 'unverified';
+      const status = item.verificationStatus || 'unverified';
+      if (item.evidenceCode) evidenceStatuses[item.evidenceCode.toString().trim()] = status;
+      if (item._id) evidenceStatuses[item._id.toString().trim()] = status;
+      if (item.id) evidenceStatuses[item.id.toString().trim()] = status;
     }
-    const newCode = newEvidence.evidenceCode || newEvidence._id || newEvidence.id;
-    if (newCode) evidenceStatuses[newCode] = newEvidence.verificationStatus || 'unverified';
 
-    const caseMemoryIds = (contextData.memories || []).map((m) => m._id || m.id).filter(Boolean);
+    const caseMemoryIds = Array.from(
+      new Set(
+        (contextData.memories || [])
+          .flatMap((m) => [
+            m.id ? m.id.toString().trim() : null,
+            m._id ? m._id.toString().trim() : null,
+          ])
+          .filter(Boolean)
+      )
+    );
 
     const validationContext = {
       caseEvidenceIds,
@@ -280,11 +292,17 @@ async function processEvidence(deps, { caseId, evidenceId, memoryMode = 'on', re
     );
 
     // 11. Build deterministic change summary without LLM calls
-    const retrieved = (selectedContext.included && selectedContext.included.relatedEvidence) || [];
+    const retrieved =
+      memoryMode === 'off'
+        ? []
+        : (selectedContext.included && selectedContext.included.relatedEvidence) || [];
     const retrievedEvidenceIds = retrieved.map((e) => e.evidenceCode || e._id || e.id).filter(Boolean);
-    const retrievedMemoryIds = ((selectedContext.included && selectedContext.included.memories) || [])
-      .map((m) => m._id || m.id)
-      .filter(Boolean);
+    const retrievedMemoryIds =
+      memoryMode === 'off'
+        ? []
+        : ((selectedContext.included && selectedContext.included.memories) || [])
+            .map((m) => m._id || m.id)
+            .filter(Boolean);
 
     const reportVersion =
       contextData.previousReport && typeof contextData.previousReport.version === 'number'
