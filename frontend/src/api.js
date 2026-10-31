@@ -390,6 +390,28 @@ export async function getLatestReport(caseId) {
 }
 
 /**
+ * GET /api/cases/:caseId/reports/:version
+ * Retrieves a specific report version for the case.
+ *
+ * @param {string} caseId
+ * @param {string|number} version
+ * @returns {Promise<any>}
+ */
+export async function getReportByVersion(caseId, version) {
+  if (!caseId || version === undefined || version === null) {
+    throw new ApiError({
+      kind: 'validation',
+      message: 'caseId and version are required.',
+      status: 400,
+      code: 'MISSING_PARAM',
+    });
+  }
+  return request(`/cases/${encodeURIComponent(caseId)}/reports/${encodeURIComponent(version)}`, {
+    method: 'GET',
+  });
+}
+
+/**
  * GET /api/cases/:caseId/reports
  * Lists all generated report versions for the case, ordered by version descending (newest first).
  *

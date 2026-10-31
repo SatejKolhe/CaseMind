@@ -27,6 +27,8 @@ function resetAiProvider() {
  */
 function loadAiModule() {
   const possiblePaths = [
+    path.resolve(__dirname, '../../../server/ai'),
+    path.resolve(__dirname, '../../../server/ai/index'),
     path.resolve(__dirname, '../../../ai'),
     path.resolve(__dirname, '../../../ai/src/index'),
     path.resolve(__dirname, '../../../ai/src'),

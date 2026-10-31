@@ -335,6 +335,168 @@ async function processEvidence(deps, { caseId, evidenceId, memoryMode = 'on', re
   });
 }
 
+/**
+ * Adapts high-level investigation synthesis for backend consumption per API_CONTRACT.md.
+ * Synthesizes case evidence and active working memories, returning canonical sections.
+ *
+ * @param {object} params
+ * @param {object} params.caseDetails
+ * @param {Array<object>} params.evidenceList
+ * @param {Array<object>} params.currentMemories
+ * @returns {Promise<object>}
+ */
+async function analyzeInvestigation({ caseDetails, evidenceList = [], currentMemories = [] }) {
+  if (!evidenceList || evidenceList.length === 0) {
+    return {
+      summary: `Investigation initialized for "${caseDetails?.title || 'Case'}". No evidence ingested yet.`,
+      knownFacts: [],
+      unverifiedClaims: [],
+      evidenceConnections: [],
+      contradictions: [],
+      possibleHypotheses: [],
+      openQuestions: ['Awaiting initial evidence submission.'],
+      suggestedNextChecks: ['Gather initial witness statements and physical evidence.'],
+      memoryUpdates: [],
+      explanationOfChange: 'Initial baseline report created.',
+    };
+  }
+
+  // Treat newest evidence item as newEvidence, earlier as relatedEvidence
+  const sorted = [...evidenceList].sort((a, b) => {
+    const timeA = new Date(a.occurredAt || 0).getTime();
+    const timeB = new Date(b.occurredAt || 0).getTime();
+    return timeA - timeB;
+  });
+
+  const newEvidence = sorted[sorted.length - 1];
+  const relatedEvidence = sorted.slice(0, sorted.length - 1);
+
+  const caseEvidenceIds = new Set(
+    evidenceList.map((e) => e.evidenceCode || e.id || e._id).filter(Boolean)
+  );
+  const caseMemoryIds = new Set(
+    currentMemories.map((m) => m.id || m._id).filter(Boolean)
+  );
+
+  const rawResult = await analyzeValidated({
+    newEvidence,
+    relatedEvidence,
+    memories: currentMemories,
+    caseEvidenceIds,
+    caseMemoryIds,
+  });
+
+  const rep = rawResult.report || {};
+  const proposals = rawResult.memoryProposals || [];
+
+  // Map knownFacts
+  const knownFacts = (rep.knownFacts || []).map((kf) => ({
+    statement: kf.statement,
+    verifiedByEvidenceCodes: (kf.evidenceIds || []).filter((id) => caseEvidenceIds.has(id)),
+  })).filter((kf) => kf.verifiedByEvidenceCodes.length > 0);
+
+  // Map unverifiedClaims
+  const unverifiedClaims = (rep.unverifiedClaims || []).map((uc) => ({
+    statement: uc.statement,
+    source: uc.verificationStatus || 'unverified source',
+    evidenceCodes: (uc.evidenceIds || []).filter((id) => caseEvidenceIds.has(id)),
+  })).filter((uc) => uc.evidenceCodes.length > 0);
+
+  // Map evidenceConnections
+  const evidenceConnections = (rep.evidenceConnections || []).map((ec) => ({
+    connection: ec.description,
+    evidenceCodes: (ec.evidenceIds || []).filter((id) => caseEvidenceIds.has(id)),
+  })).filter((ec) => ec.evidenceCodes.length > 0);
+
+  // Map contradictions
+  const contradictions = (rep.contradictions || []).map((c) => {
+    const conflictingCodes = [
+      ...(c.claimA?.evidenceIds || []),
+      ...(c.claimB?.evidenceIds || []),
+    ].filter((id) => caseEvidenceIds.has(id));
+
+    return {
+      pointOfConflict: c.explanation || `${c.claimA?.text || 'Claim A'} contradicts ${c.claimB?.text || 'Claim B'}`,
+      conflictingEvidenceCodes: conflictingCodes,
+    };
+  }).filter((c) => c.conflictingEvidenceCodes.length > 0);
+
+  // Map possibleHypotheses
+  const possibleHypotheses = (rep.hypotheses || []).map((h) => {
+    const supportedBy = (h.supportingEvidenceIds || []).filter((id) => caseEvidenceIds.has(id));
+    const unresolvedPoints = (h.conflictingEvidenceIds || []).filter((id) => caseEvidenceIds.has(id));
+
+    return {
+      hypothesisId: h.hypothesisId || 'HYP-1',
+      title: (h.description || 'Hypothesis').slice(0, 60),
+      rationale: h.description || '',
+      supportedBy,
+      unresolvedPoints: unresolvedPoints.length > 0 ? unresolvedPoints : ['Requires further corroborating evidence.'],
+    };
+  });
+
+  // Map openQuestions & suggestedNextChecks
+  const openQuestions = (rep.openQuestions || []).map((q) => (typeof q === 'string' ? q : q.question)).filter(Boolean);
+  const suggestedNextChecks = (rep.suggestedNextChecks || []).map((s) => {
+    if (typeof s === 'string') return s;
+    return `${s.check}${s.purpose ? ` (${s.purpose})` : ''}`.trim();
+  }).filter(Boolean);
+
+  // Map memoryUpdates
+  const categoryMap = {
+    fact: 'fact',
+    lead: 'inference',
+    inconsistency: 'contradiction',
+    hypothesis: 'hypothesis',
+    timeline_event: 'fact',
+  };
+
+  const memoryUpdates = [];
+  for (const prop of proposals) {
+    const category = categoryMap[prop.type] || 'inference';
+    let action = 'add';
+    let targetMemoryId = undefined;
+
+    if (prop.action === 'supersede' && prop.targetMemoryId && caseMemoryIds.has(prop.targetMemoryId)) {
+      action = 'supersede';
+      targetMemoryId = prop.targetMemoryId;
+    } else if (prop.action === 'update' && prop.targetMemoryId && caseMemoryIds.has(prop.targetMemoryId)) {
+      action = 'update';
+      targetMemoryId = prop.targetMemoryId;
+    }
+
+    const supportingEvidenceCodes = (prop.evidenceIds || []).filter((id) => caseEvidenceIds.has(id));
+    if (supportingEvidenceCodes.length > 0) {
+      const updateItem = {
+        category,
+        statement: prop.summary,
+        supportingEvidenceCodes,
+        action,
+        changeReason: prop.reason || 'Synthesized from evidentiary analysis.',
+      };
+      if (targetMemoryId) {
+        updateItem.targetMemoryId = targetMemoryId;
+      }
+      memoryUpdates.push(updateItem);
+    }
+  }
+
+  const summary = `Investigation synthesis for "${caseDetails?.title || 'Case'}": Ingested ${evidenceList.length} evidence record(s). ${knownFacts.length} verified fact(s), ${possibleHypotheses.length} active hypothesis(es), and ${contradictions.length} contradiction(s) analyzed.`;
+
+  return {
+    summary,
+    knownFacts,
+    unverifiedClaims,
+    evidenceConnections,
+    contradictions,
+    possibleHypotheses,
+    openQuestions: openQuestions.length > 0 ? openQuestions : ['Monitor incoming forensic and testimonial evidence.'],
+    suggestedNextChecks: suggestedNextChecks.length > 0 ? suggestedNextChecks : ['Verify timeline consistency across witness statements.'],
+    memoryUpdates,
+    explanationOfChange: `Synthesis updated based on latest evidence ${newEvidence.evidenceCode || newEvidence.title || ''}.`,
+  };
+}
+
 module.exports = {
   // Core workflow export per SPEC.md
   processEvidence,
@@ -345,6 +507,9 @@ module.exports = {
 
   // Graph data export
   buildGraph,
+
+  // Backend interoperability export
+  analyzeInvestigation,
 
   // Primary exports per SPEC.md & architecture
   redact,

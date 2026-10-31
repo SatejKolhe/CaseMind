@@ -122,19 +122,19 @@ async function getReportByVersion(req, res) {
       });
     }
 
-    // 2. Validate version as a positive integer
-    if (!isValidVersion(version)) {
+    const isLatest = version === 'latest';
+    // 2. Validate version as a positive integer (or 'latest')
+    if (!isLatest && !isValidVersion(version)) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'INVALID_VERSION_FORMAT',
-          message: 'Version must be a positive integer (e.g. 1, 2, 3).',
+          message: 'Version must be a positive integer (e.g. 1, 2, 3) or "latest".',
           details: { version },
         },
       });
     }
 
-    const versionNum = parseInt(version, 10);
     const objectId = new ObjectId(caseId);
     const db = getDB();
 
@@ -152,10 +152,22 @@ async function getReportByVersion(req, res) {
     }
 
     // 4. Retrieve specific report version scoped to caseId
-    const reportDoc = await db.collection('reports').findOne({
-      caseId: objectId,
-      version: versionNum,
-    });
+    let reportDoc = null;
+    if (isLatest) {
+      const latestReports = await db
+        .collection('reports')
+        .find({ caseId: objectId })
+        .sort({ version: -1 })
+        .limit(1)
+        .toArray();
+      reportDoc = latestReports[0] || null;
+    } else {
+      const versionNum = parseInt(version, 10);
+      reportDoc = await db.collection('reports').findOne({
+        caseId: objectId,
+        version: versionNum,
+      });
+    }
 
     if (!reportDoc) {
       return res.status(404).json({
