@@ -1,0 +1,34 @@
+{
+  "caseId": "CASE-FIXTURE-LEAK-002",
+  "title": "FinTech Corp Customer Data Leak Incident",
+  "description": "Fictional test case: Investigation into unauthorized disclosure of customer transaction summaries on a public forum.",
+  "evidence": [
+    {
+      "id": "EV-01",
+      "title": "API Gateway Bulk Export Telemetry",
+      "source": "Production Gateway Access Log",
+      "sourceType": "digital",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-30T03:00:10.000Z",
+      "content": "API Gateway recorded an unexpected 45,000-record CSV export query using service account token 'svc_payment_read' from internal IP 10.0.4.12 at 03:00:10 UTC."
+    },
+    {
+      "id": "EV-02",
+      "title": "DevOps Engineer Shift Handover Note",
+      "source": "Internal Slack Ops Channel Archive",
+      "sourceType": "document",
+      "verificationStatus": "verified",
+      "occurredAt": "2026-10-30T02:30:00.000Z",
+      "content": "DevOps Engineer Maya Lin notes that service token 'svc_payment_read' was invalidated and regenerated as part of scheduled routine rotation at 02:30:00 UTC."
+    },
+    {
+      "id": "EV-03",
+      "title": "Public Pastebin Leak Sighting",
+      "source": "Security Analyst Triage Report",
+      "sourceType": "digital",
+      "verificationStatus": "unverified",
+      "occurredAt": "2026-10-30T02:45:00.000Z",
+      "content": "An unverified public paste containing 20 masked customer records matching the schema was posted at 02:45:00 UTC, 15 minutes before the recorded gateway export at 03:00:10 UTC."
+    }
+  ]
+}
