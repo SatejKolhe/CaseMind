@@ -7,6 +7,7 @@ const {
 const evidenceRoutes = require('./evidenceRoutes');
 const memoryRoutes = require('./memoryRoutes');
 const reportRoutes = require('./reportRoutes');
+const analysisRoutes = require('./analysisRoutes');
 
 const router = express.Router();
 
@@ -14,6 +15,7 @@ const router = express.Router();
 router.use('/:caseId/evidence', evidenceRoutes);
 router.use('/:caseId/memories', memoryRoutes);
 router.use('/:caseId/reports', reportRoutes);
+router.use('/:caseId/analyze', analysisRoutes);
 
 router.post('/', createCase);
 router.get('/', getCases);
