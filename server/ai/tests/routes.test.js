@@ -108,8 +108,8 @@ async function runRoutesTests() {
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.success, true);
       assert.strictEqual(res.body.data.status, 'ok');
-      assert.ok(res.body.data.report);
-      assert.strictEqual(res.body.data.changeSummary, null);
+      assert.ok(res.body.data.changeSummary, 'res.body.data.changeSummary must be populated');
+      assert.strictEqual(res.body.data.changeSummary.added, 'EV-01');
       console.log('  Passed: Analysis endpoint returned 200 with verified report.');
     }
 

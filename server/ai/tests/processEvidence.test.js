@@ -77,7 +77,8 @@ async function runTests() {
     assert.ok(result.report);
     assert.strictEqual(result.report.knownFacts.length, 1);
     assert.strictEqual(result.memoryProposals.accepted.length, 1);
-    assert.strictEqual(result.changeSummary, null);
+    assert.ok(result.changeSummary, 'result.changeSummary must be populated');
+    assert.strictEqual(result.changeSummary.added, 'EV-01');
     assert.ok(Array.isArray(result.retrieved));
     assert.ok(result.audit);
     assert.strictEqual(result.audit.validationOutcome, 'passed');

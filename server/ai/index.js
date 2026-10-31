@@ -7,6 +7,7 @@ const { selectContext, estimateTokens, createDigest } = require('./contextBudget
 const { buildAnalysisInput, runAnalysisWithMode } = require('./modes');
 const schemas = require('./schemas');
 const config = require('./config');
+const { buildChangeSummary, diffReports } = require('./changeSummary');
 
 /**
  * In-memory per-case promise queues to ensure strict sequential execution
@@ -278,15 +279,36 @@ async function processEvidence(deps, { caseId, evidenceId, memoryMode = 'on', re
       `[AI ProcessEvidence] Success case=${caseId} evidence=${evidenceId} duration=${durationMs}ms estTokens=${tokenEst} status=ok`
     );
 
-    // 11. Return analysis payload. Note: Member 1's functions save to DB; processEvidence does not save.
+    // 11. Build deterministic change summary without LLM calls
     const retrieved = (selectedContext.included && selectedContext.included.relatedEvidence) || [];
+    const retrievedEvidenceIds = retrieved.map((e) => e.evidenceCode || e._id || e.id).filter(Boolean);
+    const retrievedMemoryIds = ((selectedContext.included && selectedContext.included.memories) || [])
+      .map((m) => m._id || m.id)
+      .filter(Boolean);
+
+    const reportVersion =
+      contextData.previousReport && typeof contextData.previousReport.version === 'number'
+        ? contextData.previousReport.version + 1
+        : 1;
+
+    const changeSummary = buildChangeSummary({
+      newEvidenceId: newEvidence.evidenceCode || newEvidence._id || newEvidence.id || evidenceId,
+      retrievedEvidenceIds,
+      retrievedMemoryIds,
+      previousReport: contextData.previousReport || null,
+      newReport: analysisOutput.report,
+      acceptedProposals: normalizedProposals.accepted,
+      reportVersion,
+    });
+
+    // 12. Return analysis payload. Note: Member 1's functions save to DB; processEvidence does not save.
     return {
       report: analysisOutput.report,
       memoryProposals: {
         accepted: normalizedProposals.accepted,
         rejected: normalizedProposals.rejected,
       },
-      changeSummary: null,
+      changeSummary,
       retrieved,
       status: 'ok',
       audit,
@@ -297,6 +319,10 @@ async function processEvidence(deps, { caseId, evidenceId, memoryMode = 'on', re
 module.exports = {
   // Core workflow export per SPEC.md
   processEvidence,
+
+  // Change summary & diffing
+  buildChangeSummary,
+  diffReports,
 
   // Primary exports per SPEC.md & architecture
   redact,
