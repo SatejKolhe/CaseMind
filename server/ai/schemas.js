@@ -129,7 +129,7 @@ const SuggestedNextCheckSchema = z.object({
  */
 const MemoryUpdateSchema = z.object({
   action: MemoryActionEnum,
-  memoryId: z.string().min(1).optional(),
+  memoryId: z.string().optional().nullable().transform((val) => (val && val.trim() ? val.trim() : undefined)),
   summary: z.string().min(1, 'summary must not be empty'),
   reason: z.string().min(1, 'reason must not be empty'),
   evidenceIds: z.array(z.string().min(1, 'evidenceId must not be empty')).min(1, 'memoryUpdates must cite at least one evidenceId'),
@@ -159,7 +159,7 @@ const MemoryProposalSchema = z.object({
   summary: z.string().min(1, 'summary must not be empty'),
   evidenceIds: z.array(z.string().min(1, 'evidenceId must not be empty')).min(1, 'evidenceIds must not be empty'),
   confidenceLabel: ConfidenceLabelEnum,
-  targetMemoryId: z.string().min(1).optional(),
+  targetMemoryId: z.string().optional().nullable().transform((val) => (val && val.trim() ? val.trim() : undefined)),
   reason: z.string().min(1, 'reason must not be empty'),
 }).strict().superRefine(guardrailRefinement);
 

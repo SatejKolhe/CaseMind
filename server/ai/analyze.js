@@ -20,12 +20,14 @@ function formatEvidenceBlock(item) {
   const status = item.verificationStatus || 'unverified';
   const time = item.occurredAt || item.eventTime || item.eventTimeText || 'Unknown time';
   const content = item.content || item.description || item.originalText || '';
+  const correctsAttr = item.correctsEvidenceId ? ` correctsEvidenceId="${item.correctsEvidenceId}"` : '';
+  const correctsLine = item.correctsEvidenceId ? `Corrects Evidence: ${item.correctsEvidenceId}\n` : '';
 
-  return `<evidence id="${id}" sourceType="${sourceType}" verificationStatus="${status}">
+  return `<evidence id="${id}" sourceType="${sourceType}" verificationStatus="${status}"${correctsAttr}>
 Title: ${title}
 Source: ${source}
 Occurred: ${time}
-Content:
+${correctsLine}Content:
 ${content}
 </evidence>`;
 }
